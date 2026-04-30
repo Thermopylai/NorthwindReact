@@ -1,0 +1,75 @@
+* {
+    box-sizing: border-box;
+}
+
+/* Set padding to keep content from hitting the edges */
+.body-content {
+    margin-top: 20px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+/* Set width on the form input elements since they're 100% wide by default */
+input,
+select,
+textarea {
+    max-width: 220px;
+}
+
+input[type="checkbox"] {
+    max-width: none;
+}
+
+input[type="date"] {
+    max-width: none;
+}
+
+input[type="number"] {
+    max-width: 100px;
+}
+
+input[type="text"] {
+    max-width: 150px;
+}
+
+input[type="email"] {
+    max-width: 150px;
+}
+
+input[type="tel"] {
+    max-width: 150px;
+}
+
+input[type="url"] {
+    max-width: 150px;
+}
+
+input[type="password"] {
+    max-width: 150px;
+}
+
+input[type="search"] {
+    max-width: 150px;
+}
+
+.input-group {
+    margin-bottom: 15px;
+    margin-right: 15px;
+    max-width: fit-content;
+}
+
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sortable-header:hover {
+    background-color: #00b3b3;
+}
+
+.sortable-header.active-sort {
+    background-color: #008378;
+    font-weight: 700;
+    text-decoration: underline;
+}
