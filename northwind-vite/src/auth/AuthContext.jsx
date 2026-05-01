@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { clearAuthToken, getAuthToken, saveAuthToken } from "./authStorage";
+import {
+  clearAuthTokens,
+  getAuthToken,
+  getRefreshToken,
+  getAccessTokenExpiresAt,
+  getRefreshTokenExpiresAt,
+  saveAuthTokens,
+  isDateExpired,
+  isDateExpiringSoon,
+} from "./authStorage";
 import {
   registerRequest,
   loginRequest,
@@ -14,12 +23,12 @@ import {
   deleteUserRequest,
   getUserInfoRequest,
   updateUserRequest,
-  changePasswordRequest
+  changePasswordRequest,
 } from "../api/auth";
 import { AuthContext } from "./authContextInstance";
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(getAuthToken());
+  const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [claims, setClaims] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,15 +58,40 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const init = async () => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
       try {
+        const accessToken = getAuthToken();
+        const refreshToken = getRefreshToken();
+        const accessTokenExpiresAt = getAccessTokenExpiresAt();
+        const refreshTokenExpiresAt = getRefreshTokenExpiresAt();
+
+        if (!accessToken || !refreshToken) {
+          clearAuthTokens();
+          setLoading(false);
+          return;
+        }
+
+        if (!isDateExpired(accessTokenExpiresAt)) {
+          setToken(accessToken);
+          await loadIdentity(token);
+          return;
+        }
+
+        if (isDateExpired(refreshTokenExpiresAt)) {
+          clearAuthTokens();
+          return;
+        }
+
+        if (isDateExpiringSoon(accessTokenExpiresAt, 60)) {
+          const refreshed = await refreshRequest();
+          saveAuthTokens(refreshed);
+          setToken(refreshed.accessToken);
+        }
+        
         await loadIdentity(token);
-      } catch {
-        clearAuthToken();
+
+      } catch (error) {
+        console.error("Auth initialization failed:", error);
+        clearAuthTokens();
         setToken(null);
         setUser(null);
         setClaims([]);
@@ -72,13 +106,13 @@ export const AuthProvider = ({ children }) => {
   const login = async (payload) => {
     const result = await loginRequest(payload);
 
-    if (!result.accessToken) {
-      throw new Error("Access Token puuttuu vastauksesta");
+    if (!result.success) {
+      throw new Error(result.message)
     }
 
-    saveAuthToken(result.accessToken, result.accessTokenExpiresAt);
+    saveAuthTokens(result);
     setToken(result.accessToken);
-    await loadIdentity(result.accessToken);
+    await loadIdentity(token);
 
     return result;
   };
@@ -87,13 +121,16 @@ export const AuthProvider = ({ children }) => {
     if (!token) {
       throw new Error("Ei tokenia, jota päivittää");
     }
+
     const result = await refreshRequest(token);
-    if (!result.refreshToken) {
-      throw new Error("Refresh Token puuttuu vastauksesta");
+
+    if (!result.success) {
+      throw new Error(result.message)
     }
-    saveAuthToken(result.refreshToken, result.refreshTokenExpiresAt);
+    
+    saveAuthTokens(result);
     setToken(result.refreshToken);
-    await loadIdentity(result.refreshToken);
+    await loadIdentity(token);
   };
 
   const logout = async () => {
@@ -101,10 +138,10 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         await logoutRequest(token);
       }
-    } catch {
-      // ei blokata logoutia frontendissä vaikka backend-vastaus epäonnistuisi
+    } catch (error) {
+      console.warn("Backend logout failed: ", error);
     } finally {
-      clearAuthToken();
+      clearAuthTokens();
       setToken(null);
       setUser(null);
       setClaims([]);
@@ -126,9 +163,9 @@ export const AuthProvider = ({ children }) => {
       throw new Error("Access Token puuttuu vastauksesta");
     }
 
-    saveAuthToken(result.accessToken, result.accessTokenExpiresAt);
+    saveAuthTokens(result);
     setToken(result.accessToken);
-    await loadIdentity(result.accessToken);
+    await loadIdentity(token);
 
     return result;
   };
@@ -147,7 +184,7 @@ export const AuthProvider = ({ children }) => {
 
   const resetPassword = async (payload) => {
     return await resetPasswordRequest(payload, token);
-  }
+  };
 
   const assignRole = async (payload) => {
     return await assignRoleRequest(payload, token);
@@ -196,7 +233,7 @@ export const AuthProvider = ({ children }) => {
     deleteUser,
     getUserInfo,
     updateUser,
-    changePassword
+    changePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

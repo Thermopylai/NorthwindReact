@@ -1,4 +1,5 @@
 import { getAuthHeaders } from "./apiClient" 
+import { getRefreshToken } from "../auth/authStorage"
 
 const AUTH_BASE_URL = "https://localhost:7065/api/auth"
 
@@ -34,10 +35,13 @@ export const loginRequest = async (payload) => {
   return data
 }
 
-export const refreshRequest = async (token) => {
+export const refreshRequest = async () => {
+  const refreshToken = getRefreshToken()
+
   const response = await fetch(`${AUTH_BASE_URL}/refresh`, {
     method: "POST",
-    headers: getAuthHeaders(token)
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ refreshToken })
   })
 
   const data = await response.json()
@@ -49,16 +53,19 @@ export const refreshRequest = async (token) => {
   return data
 }
 
-export const logoutRequest = async (token) => {
+export const logoutRequest = async () => {
+  const refreshToken = getRefreshToken()
+
   const response = await fetch(`${AUTH_BASE_URL}/logout`, {
     method: "POST",
-    headers: getAuthHeaders(token)
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ refreshToken })
   })
 
-  const data = await response.json()
+  const data = await response.json().catch(() => null)
 
-  if (!response.ok) {
-    throw new Error(data.message || "Uloskirjautuminen epäonnistui")
+  if (!response.ok || data?.success === false) {
+    throw new Error(data?.message || "Uloskirjautuminen epäonnistui")
   }
 
   return data
