@@ -51,8 +51,15 @@ export const AuthProvider = ({ children }) => {
   }, [claims]);
 
   const loadIdentity = async (token) => {
+    if (!token) {
+      throw new Error("Ei tokenia, identiteettiä ei voi ladata");
+    }
     const userData = await getUserInfoRequest(token);
-    setUser(userData);
+    setUser({ 
+      userId: userData.userId,
+      userName: userData.userName,
+      email: userData.email,
+    });
     setClaims(userData.claims);
   };
 
@@ -72,7 +79,7 @@ export const AuthProvider = ({ children }) => {
 
         if (!isDateExpired(accessTokenExpiresAt)) {
           setToken(accessToken);
-          await loadIdentity(token);
+          await loadIdentity(accessToken);
           return;
         }
 
@@ -85,10 +92,10 @@ export const AuthProvider = ({ children }) => {
           const refreshed = await refreshRequest();
           saveAuthTokens(refreshed);
           setToken(refreshed.accessToken);
+          await loadIdentity(refreshed.accessToken);
+          return;
         }
         
-        await loadIdentity(token);
-
       } catch (error) {
         console.error("Auth initialization failed:", error);
         clearAuthTokens();
@@ -101,36 +108,42 @@ export const AuthProvider = ({ children }) => {
     };
 
     init();
-  }, [token]);
+  }, []);
+
+  const register = async (payload) => {
+    const result = await registerRequest(payload);
+
+    if (!result.success) {
+      throw new Error("Virhe rekisteröinnissä: " + result.message);
+    }
+
+    saveAuthTokens(result);
+    setToken(result.accessToken);
+    await loadIdentity(result.accessToken);
+  };
 
   const login = async (payload) => {
     const result = await loginRequest(payload);
 
     if (!result.success) {
-      throw new Error(result.message)
-    }
-
-    saveAuthTokens(result);
-    setToken(result.accessToken);
-    await loadIdentity(token);
-
-    return result;
-  };
-
-  const refresh = async () => {
-    if (!token) {
-      throw new Error("Ei tokenia, jota päivittää");
-    }
-
-    const result = await refreshRequest(token);
-
-    if (!result.success) {
-      throw new Error(result.message)
+      throw new Error("Virhe kirjautumisessa: " + result.message);
     }
     
     saveAuthTokens(result);
+    setToken(result.accessToken);
+    await loadIdentity(result.accessToken);
+  };
+
+  const refresh = async () => {
+    const result = await refreshRequest(token);
+
+    if (!result.success) {
+      throw new Error("Virhe päivityksessä: " + result.message);
+    }
+
+    saveAuthTokens(result);
     setToken(result.refreshToken);
-    await loadIdentity(token);
+    await loadIdentity(result.refreshToken);
   };
 
   const logout = async () => {
@@ -154,20 +167,6 @@ export const AuthProvider = ({ children }) => {
 
   const hasRole = (role) => {
     return roleClaims.includes(role);
-  };
-
-  const register = async (payload) => {
-    const result = await registerRequest(payload);
-
-    if (!result.accessToken) {
-      throw new Error("Access Token puuttuu vastauksesta");
-    }
-
-    saveAuthTokens(result);
-    setToken(result.accessToken);
-    await loadIdentity(token);
-
-    return result;
   };
 
   const getAllUsers = async () => {

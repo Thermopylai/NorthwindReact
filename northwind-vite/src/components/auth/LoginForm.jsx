@@ -32,7 +32,7 @@ const LoginForm = () => {
       await login(formData);
       navigate("/products");
     } catch (err) {
-      setError(err.message);
+      setError("Virhe lomakkeen käsittelyssä: " + err.message);
     } finally {
       setLoading(false);
     }
