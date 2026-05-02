@@ -33,31 +33,42 @@ export const AuthProvider = ({ children }) => {
   const [claims, setClaims] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const clearAuthState = () => {
+    clearAuthTokens();
+    setToken(null);
+    setUser(null);
+    setClaims([]);
+  };
+
   const permissionClaims = useMemo(() => {
     return claims
-      .filter((c) => c.type.toLowerCase().includes("permission"))
+      .filter((c) => c.type?.toLowerCase().includes("permission"))
       .map((c) => c.value);
   }, [claims]);
 
   const roleClaims = useMemo(() => {
     return claims
-      .filter(
-        (c) =>
-          c.type === "role" ||
-          c.type.endsWith("/role") ||
-          c.type.toLowerCase().includes("role"),
-      )
+      .filter((c) => {
+        const type = c.type?.toLowerCase() ?? "";
+
+        return (
+          type === "role" || type.endsWith("/role") || type.includes("role")
+        );
+      })
       .map((c) => c.value);
   }, [claims]);
 
-  const loadIdentity = async (token) => {
-    if (!token) {
-      throw new Error("Ei tokenia, identiteettiä ei voi ladata: " + token);
+  const loadIdentity = async (accessToken) => {
+    if (!accessToken) {
+      throw new Error("Ei tokenia, identiteettiä ei voi ladata.");
     }
-    const userData = await getUserInfoRequest(token);
+
+    const userData = await getUserInfoRequest(accessToken);
+
     setUser(userData);
-    setClaims(userData.claims);
-    setLoading(false);
+    setClaims(userData.claims ?? []);
+
+    return userData;
   };
 
   useEffect(() => {
@@ -69,42 +80,28 @@ export const AuthProvider = ({ children }) => {
         const refreshTokenExpiresAt = getRefreshTokenExpiresAt();
 
         if (!accessToken || !refreshToken) {
-          clearAuthTokens();
-          setLoading(false);
+          clearAuthState();
           return;
         }
 
-        if (!isDateExpired(accessTokenExpiresAt)) {
+        if (isDateExpired(refreshTokenExpiresAt)) {
+          clearAuthState();
+          return;
+        }
+
+        if (!isDateExpiringSoon(accessTokenExpiresAt, 60)) {
           setToken(accessToken);
           await loadIdentity(accessToken);
           return;
         }
 
-        if (isDateExpiringSoon(accessTokenExpiresAt, 60)) {
-          const refreshed = await refreshRequest();
-          saveAuthTokens(refreshed);
-          setToken(refreshed.accessToken);
-          await loadIdentity(refreshed.accessToken);
-          return;
-        }
-
-        if (isDateExpired(accessTokenExpiresAt) && isDateExpired(refreshTokenExpiresAt)) {
-          clearAuthTokens();
-          setLoading(false);
-          return;
-        }
-
-        const refreshed = await refreshRequest()
-        saveAuthTokens(refreshed)
-        setToken(refreshed.accessToken)
-        await loadIdentity(refreshed.accessToken)
-        
+        const refreshed = await refreshRequest();
+        saveAuthTokens(refreshed);
+        setToken(refreshed.accessToken);
+        await loadIdentity(refreshed.accessToken);
       } catch (error) {
-        clearAuthTokens();
-        setToken(null);
-        setUser(null);
-        setClaims([]);
-        throw new Error("Auth initialization failed: " + error.message);
+        console.error("Auth initialization failed:", error);
+        clearAuthState();
       } finally {
         setLoading(false);
       }
@@ -112,6 +109,48 @@ export const AuthProvider = ({ children }) => {
 
     init();
   }, []);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const accessTokenExpiresAt = getAccessTokenExpiresAt();
+    const refreshTokenExpiresAt = getRefreshTokenExpiresAt();
+
+    if (!accessTokenExpiresAt || !refreshTokenExpiresAt) return;
+
+    if (isDateExpired(refreshTokenExpiresAt)) {
+      clearAuthState();
+      return;
+    }
+
+    const expiresAtMs = new Date(accessTokenExpiresAt).getTime();
+    const nowMs = Date.now();
+
+    // Refresh 60 sekuntia ennen access tokenin vanhenemista
+    const refreshDelayMs = expiresAtMs - nowMs - 60_000;
+
+    const timeoutId = setTimeout(
+      async () => {
+        try {
+          const result = await refreshRequest();
+
+          if (!result.success) {
+            throw new Error(result.message || "Token refresh failed");
+          }
+
+          saveAuthTokens(result);
+          setToken(result.accessToken);
+          await loadIdentity(result.accessToken);
+        } catch (error) {
+          console.error("Automatic token refresh failed:", error);
+          clearAuthState();
+        }
+      },
+      Math.max(refreshDelayMs, 0),
+    );
+
+    return () => clearTimeout(timeoutId);
+  }, [token]);
 
   const register = async (payload) => {
     const result = await registerRequest(payload);
@@ -131,36 +170,31 @@ export const AuthProvider = ({ children }) => {
     if (!result.success) {
       throw new Error("Virhe kirjautumisessa: " + result.message);
     }
-    
+
     saveAuthTokens(result);
     setToken(result.accessToken);
     await loadIdentity(result.accessToken);
   };
 
   const refresh = async () => {
-    const result = await refreshRequest(token);
+    const result = await refreshRequest();
 
     if (!result.success) {
       throw new Error("Virhe päivityksessä: " + result.message);
     }
 
     saveAuthTokens(result);
-    setToken(result.refreshToken);
-    await loadIdentity(result.refreshToken);
+    setToken(result.accessToken);
+    await loadIdentity(result.accessToken);
   };
 
   const logout = async () => {
     try {
-      if (token) {
-        await logoutRequest(token);
-      }
+      await logoutRequest();
     } catch (error) {
-      throw new Error("Virhe uloskirjautumisessa: " + error.message);
+      console.warn("Backend logout epäonnistui: ", error);
     } finally {
-      clearAuthTokens();
-      setToken(null);
-      setUser(null);
-      setClaims([]);
+      clearAuthState();
       setLoading(false);
     }
   };
