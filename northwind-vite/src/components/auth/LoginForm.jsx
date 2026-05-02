@@ -12,7 +12,7 @@ const LoginForm = () => {
   });
 
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setSubmitting] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -27,14 +27,14 @@ const LoginForm = () => {
     event.preventDefault();
 
     try {
-      setLoading(true);
+      setSubmitting(true);
       setError("");
       await login(formData);
       navigate("/products");
     } catch (err) {
       setError("Virhe lomakkeen käsittelyssä: " + err.message);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -71,11 +71,8 @@ const LoginForm = () => {
 
       {error && <p className="text-danger">{error}</p>}
 
-      <button 
-        className="btn btn-primary" 
-        type="submit" 
-        disabled={loading}>
-        {loading ? "Kirjaudutaan..." : "Kirjaudu"}
+      <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Kirjaudutaan..." : "Kirjaudu"}
       </button>
       <button
         className="btn btn-link"

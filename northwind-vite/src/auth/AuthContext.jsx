@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [claims, setClaims] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [isAuthLoading, setAuthLoading] = useState(true);
 
   const clearAuthState = () => {
     clearAuthTokens();
@@ -73,6 +73,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const init = async () => {
+      setAuthLoading(true);
       try {
         const accessToken = getAuthToken();
         const refreshToken = getRefreshToken();
@@ -103,7 +104,7 @@ export const AuthProvider = ({ children }) => {
         console.error("Auth initialization failed:", error);
         clearAuthState();
       } finally {
-        setLoading(false);
+        setAuthLoading(false);
       }
     };
 
@@ -189,14 +190,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    setLoading(true);
+    setAuthLoading(true);
     try {
       await logoutRequest();
     } catch (error) {
       console.warn("Backend logout epäonnistui: ", error);
     } finally {
       clearAuthState();
-      setLoading(false);
+      setAuthLoading(false);
     }
   };
 
@@ -255,7 +256,7 @@ export const AuthProvider = ({ children }) => {
     roles: roleClaims,
     permissions: permissionClaims,
     isAuthenticated: Boolean(token),
-    loading,
+    isAuthLoading,
     login,
     refresh,
     logout,

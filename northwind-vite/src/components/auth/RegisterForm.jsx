@@ -10,11 +10,11 @@ const RegisterForm = () => {
     userName: "",
     email: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
   });
 
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setSubmitting] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -29,11 +29,11 @@ const RegisterForm = () => {
     event.preventDefault();
 
     try {
-      setLoading(true);
+      setSubmitting(true);
       setError("");
       if (formData.password !== formData.confirmPassword) {
         setError("Salasanat eivät täsmää");
-        setLoading(false);
+        setSubmitting(false);
         return;
       }
       await register(formData);
@@ -41,7 +41,7 @@ const RegisterForm = () => {
     } catch (err) {
       setError("Virhe lomakkeen käsittelyssä: " + err.message);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -106,8 +106,8 @@ const RegisterForm = () => {
 
       {error && <p className="text-danger">{error}</p>}
 
-      <button className="btn btn-primary" type="submit" disabled={loading}>
-        {loading ? "Rekisteröidytään..." : "Rekisteröidy"}
+      <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Rekisteröidytään..." : "Rekisteröidy"}
       </button>
     </form>
   );
