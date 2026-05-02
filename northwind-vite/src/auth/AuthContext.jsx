@@ -52,15 +52,12 @@ export const AuthProvider = ({ children }) => {
 
   const loadIdentity = async (token) => {
     if (!token) {
-      throw new Error("Ei tokenia, identiteettiä ei voi ladata");
+      throw new Error("Ei tokenia, identiteettiä ei voi ladata: " + token);
     }
     const userData = await getUserInfoRequest(token);
-    setUser({ 
-      userId: userData.userId,
-      userName: userData.userName,
-      email: userData.email,
-    });
+    setUser(userData);
     setClaims(userData.claims);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -83,11 +80,6 @@ export const AuthProvider = ({ children }) => {
           return;
         }
 
-        if (isDateExpired(refreshTokenExpiresAt)) {
-          clearAuthTokens();
-          return;
-        }
-
         if (isDateExpiringSoon(accessTokenExpiresAt, 60)) {
           const refreshed = await refreshRequest();
           saveAuthTokens(refreshed);
@@ -95,13 +87,24 @@ export const AuthProvider = ({ children }) => {
           await loadIdentity(refreshed.accessToken);
           return;
         }
+
+        if (isDateExpired(accessTokenExpiresAt) && isDateExpired(refreshTokenExpiresAt)) {
+          clearAuthTokens();
+          setLoading(false);
+          return;
+        }
+
+        const refreshed = await refreshRequest()
+        saveAuthTokens(refreshed)
+        setToken(refreshed.accessToken)
+        await loadIdentity(refreshed.accessToken)
         
       } catch (error) {
-        console.error("Auth initialization failed:", error);
         clearAuthTokens();
         setToken(null);
         setUser(null);
         setClaims([]);
+        throw new Error("Auth initialization failed: " + error.message);
       } finally {
         setLoading(false);
       }
@@ -152,12 +155,13 @@ export const AuthProvider = ({ children }) => {
         await logoutRequest(token);
       }
     } catch (error) {
-      console.warn("Backend logout failed: ", error);
+      throw new Error("Virhe uloskirjautumisessa: " + error.message);
     } finally {
       clearAuthTokens();
       setToken(null);
       setUser(null);
       setClaims([]);
+      setLoading(false);
     }
   };
 
