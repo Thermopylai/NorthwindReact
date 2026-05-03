@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   clearAuthTokens,
   getAuthToken,
@@ -33,12 +33,37 @@ export const AuthProvider = ({ children }) => {
   const [claims, setClaims] = useState([]);
   const [isAuthLoading, setAuthLoading] = useState(true);
 
-  const clearAuthState = () => {
+  const clearAuthState = useCallback(() => {
     clearAuthTokens();
     setToken(null);
     setUser(null);
     setClaims([]);
-  };
+  }, []);
+
+  const loadIdentity = useCallback(async (accessToken) => {
+    if (!accessToken) {
+      throw new Error("Ei tokenia, identiteettiä ei voi ladata.");
+    }
+
+    const userData = await getUserInfoRequest(accessToken);
+
+    setUser(userData);
+    setClaims(userData.claims ?? []);
+
+    return userData;
+  }, []);
+
+  const refreshAuthState = useCallback(async () => {
+    const result = await refreshRequest();
+
+    if (!result.success) {
+      throw new Error("Virhe päivityksessä: " + result.message);
+    }
+
+    saveAuthTokens(result);
+    setToken(result.accessToken);
+    await loadIdentity(result.accessToken);
+  }, [loadIdentity]);
 
   const permissionClaims = useMemo(() => {
     return claims
@@ -57,19 +82,6 @@ export const AuthProvider = ({ children }) => {
       })
       .map((c) => c.value);
   }, [claims]);
-
-  const loadIdentity = async (accessToken) => {
-    if (!accessToken) {
-      throw new Error("Ei tokenia, identiteettiä ei voi ladata.");
-    }
-
-    const userData = await getUserInfoRequest(accessToken);
-
-    setUser(userData);
-    setClaims(userData.claims ?? []);
-
-    return userData;
-  };
 
   useEffect(() => {
     const init = async () => {
@@ -96,10 +108,7 @@ export const AuthProvider = ({ children }) => {
           return;
         }
 
-        const refreshed = await refreshRequest();
-        saveAuthTokens(refreshed);
-        setToken(refreshed.accessToken);
-        await loadIdentity(refreshed.accessToken);
+        await refreshAuthState();
       } catch (error) {
         console.error("Auth initialization failed:", error);
         clearAuthState();
@@ -109,7 +118,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     init();
-  }, []);
+  }, [refreshAuthState, loadIdentity, clearAuthState]);
 
   useEffect(() => {
     if (!token) return;
@@ -133,15 +142,7 @@ export const AuthProvider = ({ children }) => {
     const timeoutId = setTimeout(
       async () => {
         try {
-          const result = await refreshRequest();
-
-          if (!result.success) {
-            throw new Error(result.message || "Token refresh failed");
-          }
-
-          saveAuthTokens(result);
-          setToken(result.accessToken);
-          await loadIdentity(result.accessToken);
+          await refreshAuthState();
         } catch (error) {
           console.error("Automatic token refresh failed:", error);
           clearAuthState();
@@ -151,7 +152,7 @@ export const AuthProvider = ({ children }) => {
     );
 
     return () => clearTimeout(timeoutId);
-  }, [token]);
+  }, [token, refreshAuthState, clearAuthState]);
 
   const register = async (payload) => {
     const result = await registerRequest(payload);
@@ -170,18 +171,6 @@ export const AuthProvider = ({ children }) => {
 
     if (!result.success) {
       throw new Error("Virhe kirjautumisessa: " + result.message);
-    }
-
-    saveAuthTokens(result);
-    setToken(result.accessToken);
-    await loadIdentity(result.accessToken);
-  };
-
-  const refresh = async () => {
-    const result = await refreshRequest();
-
-    if (!result.success) {
-      throw new Error("Virhe päivityksessä: " + result.message);
     }
 
     saveAuthTokens(result);
@@ -258,7 +247,6 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: Boolean(token),
     isAuthLoading,
     login,
-    refresh,
     logout,
     hasPermission,
     hasRole,
