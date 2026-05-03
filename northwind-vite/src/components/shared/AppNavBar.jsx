@@ -6,7 +6,7 @@ import { useAuth } from "../../auth/useAuth";
 
 const AppNavbar = () => {
   const { isAuthenticated, user, logout, hasRole } = useAuth();
-
+  
   return (
     <Navbar expand="lg" className="mb-4">
       <Container>

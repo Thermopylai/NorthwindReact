@@ -10,6 +10,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 
 import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
+import RequireRole from "./auth/RequireRole";
 
 import AppNavbar from "./components/shared/AppNavBar";
 import LoginPage from "./pages/LoginPage";
@@ -22,6 +23,7 @@ import EmployeesPage from "./pages/EmployeesPage";
 import RegionsPage from "./pages/RegionsPage";
 import ShippersPage from "./pages/ShippersPage";
 import SuppliersPage from "./pages/SuppliersPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
 
 
 const App = () => {
@@ -107,6 +109,16 @@ const App = () => {
               }
             />
 
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute>
+                  <RequireRole role="Admin">
+                    <AdminUsersPage />
+                  </RequireRole>
+                </ProtectedRoute>
+              }
+            />
 
             <Route path="/" element={<Navigate to="/products" replace />} />
           </Routes>

@@ -93,8 +93,8 @@ export const searchUsersRequest = async (params, token) => {
     searchParams.append("UserId", params.userId)
   }
 
-  if (params.username !== "") {
-    searchParams.append("Username", params.username)
+  if (params.userName !== "") {
+    searchParams.append("UserName", params.userName)
   }
 
   if (params.email !== "") {
@@ -108,8 +108,8 @@ export const searchUsersRequest = async (params, token) => {
   if (params.permission !== "") {
     searchParams.append("Permission", params.permission)
   }
-
-  const response = await fetch(`${AUTH_BASE_URL}/users/search?query=${searchParams.toString()}`, {
+  console.log("Hakuparametrit:", Object.fromEntries(searchParams.entries()))
+  const response = await fetch(`${AUTH_BASE_URL}/users/search?${searchParams.toString()}`, {
     method: "GET",
     headers: getAuthHeaders(token)
   })
