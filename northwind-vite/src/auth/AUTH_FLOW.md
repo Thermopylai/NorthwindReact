@@ -5,7 +5,7 @@
 - Backend palauttaa AuthResponseDto-vastauksen.
 - Frontend tallentaa access tokenin, refresh tokenin ja niiden vanhenemisajat.
 - Frontend hakee käyttäjän tiedot `/api/auth/me`-endpointista.
-- Claims-listasta johdetaan roolit ja permissionit.
+- RolePermissions-listasta johdetaan roolit ja permissionit.
 
 ## Init
 - Sovelluksen käynnistyessä AuthContext tarkistaa localStoragen tokenit.
