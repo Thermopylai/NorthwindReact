@@ -108,7 +108,7 @@ export const searchUsersRequest = async (params, token) => {
   if (params.permission !== "") {
     searchParams.append("Permission", params.permission)
   }
-  console.log("Hakuparametrit:", Object.fromEntries(searchParams.entries()))
+  
   const response = await fetch(`${AUTH_BASE_URL}/users/search?${searchParams.toString()}`, {
     method: "GET",
     headers: getAuthHeaders(token)

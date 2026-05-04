@@ -12,14 +12,51 @@ const defaultFilters = {
 };
 
 const AdminUsersPage = () => {
-  const { deleteUser, searchUsers, user } = useAuth();
+  const {
+    deleteUser,
+    searchUsers,
+    user,
+    listRolePermissions,
+    assignRole,
+    removeRole,
+  } = useAuth();
   const [users, setUsers] = useState([]);
+  const [roleNames, setRoleNames] = useState([]);
   const [filters, setFilters] = useState(defaultFilters);
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
+  useEffect(() => {
+    const loadRolePermissions = async () => {
+      try {
+        const response = await listRolePermissions();
+
+        if (!response.success) {
+          throw new Error(
+            response.message ?? "Roolien ja käyttöoikeuksien haku epäonnistui.",
+          );
+        }
+
+        const rolePermissions =
+          response.rolePermissions ?? response.RolePermissions ?? [];
+
+        setRoleNames(
+          rolePermissions
+            .map((rp) => rp.roleName ?? rp.RoleName)
+            .filter(Boolean),
+        );
+      } catch (error) {
+        setError(
+          "Roolien ja käyttöoikeuksien haku epäonnistui: " + error.message,
+        );
+      }
+    };
+
+    loadRolePermissions();
+  }, [listRolePermissions]);
 
   useEffect(() => {
     if (!error) {
@@ -71,6 +108,52 @@ const AdminUsersPage = () => {
   useEffect(() => {
     loadUsers(defaultFilters);
   }, [loadUsers]);
+
+  const handleAssignRole = async (userId, role) => {
+    try {
+      setError("");
+      setSuccessMessage("");
+      const payload = {
+        userId,
+        roleName: role,
+      };
+      const response = await assignRole(payload);
+
+      if (!response.success) {
+        throw new Error(response.message ?? "Roolin lisääminen epäonnistui.");
+      }
+
+      setSuccessMessage("Rooli lisätty onnistuneesti");
+      await loadUsers(filters);
+    } catch (error) {
+      setError("Roolin lisääminen epäonnistui: " + error.message);
+    }
+  };
+
+  const handleRemoveRole = async (userId, role) => {
+    if (!window.confirm(`Haluatko varmasti poistaa roolin ${role} tältä käyttäjältä?`)) {
+      return;
+    }
+    
+    try {
+      setError("");
+      setSuccessMessage("");
+      const payload = {
+        userId,
+        roleName: role,
+      };
+      const response = await removeRole(payload);
+
+      if (!response.success) {
+        throw new Error(response.message ?? "Roolin poisto epäonnistui.");
+      }
+
+      setSuccessMessage("Rooli poistettu onnistuneesti");
+      await loadUsers(filters);
+    } catch (error) {
+      setError("Roolin poisto epäonnistui: " + error.message);
+    }
+  };
 
   const handleDeleteUser = async (userId) => {
     if (!window.confirm("Haluatko varmasti poistaa tämän käyttäjän?")) {
@@ -124,6 +207,9 @@ const AdminUsersPage = () => {
 
       <UsersTable
         users={users}
+        onAssignRole={handleAssignRole}
+        onRemoveRole={handleRemoveRole}
+        roleNames={roleNames}
         currentUserId={user?.userId ?? user?.UserId}
         onDelete={handleDeleteUser}
       />
