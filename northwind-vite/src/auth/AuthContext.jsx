@@ -161,7 +161,7 @@ export const AuthProvider = ({ children }) => {
     return () => clearTimeout(timeoutId);
   }, [token, refreshAuthState, clearAuthState]);
 
-  const register = async (payload) => {
+  const register = useCallback(async (payload) => {
     const result = await registerRequest(payload);
 
     if (!result.success) {
@@ -171,9 +171,9 @@ export const AuthProvider = ({ children }) => {
     saveAuthTokens(result);
     setToken(result.accessToken);
     await loadIdentity(result.accessToken);
-  };
+  }, [loadIdentity]);
 
-  const login = async (payload) => {
+  const login = useCallback(async (payload) => {
     const result = await loginRequest(payload);
 
     if (!result.success) {
@@ -183,9 +183,9 @@ export const AuthProvider = ({ children }) => {
     saveAuthTokens(result);
     setToken(result.accessToken);
     await loadIdentity(result.accessToken);
-  };
+  }, [loadIdentity]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     setAuthLoading(true);
     try {
       await logoutRequest();
@@ -195,57 +195,57 @@ export const AuthProvider = ({ children }) => {
       clearAuthState();
       setAuthLoading(false);
     }
-  };
+  }, [clearAuthState]);
 
-  const hasPermission = (permission) => {
+  const hasPermission = useCallback((permission) => {
     return userPermissions.includes(permission);
-  };
+  }, [userPermissions]);
 
-  const hasRole = (role) => {
+  const hasRole = useCallback((role) => {
     return userRoles.includes(role);
-  };
+  }, [userRoles]);
 
-  const getAllUsers = async () => {
+  const getAllUsers = useCallback(async () => {
     return await getAllUsersRequest(token);
-  };
+  }, [token]);
 
-  const searchUsers = async (params) => {
+  const searchUsers = useCallback(async (params) => {
     return await searchUsersRequest(params, token);
-  };
+  }, [token]);
 
-  const listRolePermissions = async () => {
+  const listRolePermissions = useCallback(async () => {
     return await listRolePermissionsRequest(token);
-  };
+  }, [token]);
 
-  const resetPassword = async (payload) => {
+  const resetPassword = useCallback(async (payload) => {
     return await resetPasswordRequest(payload, token);
-  };
+  }, [token]);
 
-  const assignRole = async (payload) => {
+  const assignRole = useCallback( async (payload) => {
     return await assignRoleRequest(payload, token);
-  };
+  }, [token]);
 
-  const removeRole = async (payload) => {
+  const removeRole = useCallback(async (payload) => {
     return await removeRoleRequest(payload, token);
-  };
+  }, [token]);
 
-  const deleteUser = async (userId) => {
+  const deleteUser = useCallback(async (userId) => {
     return await deleteUserRequest(userId, token);
-  };
+  }, [token]);
 
-  const getUserInfo = async () => {
+  const getUserInfo = useCallback(async () => {
     return await getUserInfoRequest(token);
-  };
+  }, [token]);
 
-  const updateUser = async (payload) => {
+  const updateUser = useCallback(async (payload) => {
     return await updateUserRequest(payload, token);
-  };
+  }, [token]);
 
-  const changePassword = async (payload) => {
+  const changePassword = useCallback(async (payload) => {
     return await changePasswordRequest(payload, token);
-  };
+  }, [token]);
 
-  const value = {
+  const value = useMemo(() => ({
     token,
     user,
     roles: userRoles,
@@ -267,7 +267,28 @@ export const AuthProvider = ({ children }) => {
     getUserInfo,
     updateUser,
     changePassword,
-  };
+  }), [
+    token,
+    user,
+    userRoles,
+    userPermissions,
+    isAuthLoading, 
+    login, 
+    logout, 
+    hasPermission, 
+    hasRole, 
+    register, 
+    getAllUsers, 
+    searchUsers, 
+    listRolePermissions, 
+    resetPassword, 
+    assignRole, 
+    removeRole, 
+    deleteUser, 
+    getUserInfo, 
+    updateUser, 
+    changePassword
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
