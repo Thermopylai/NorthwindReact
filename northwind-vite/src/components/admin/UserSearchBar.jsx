@@ -83,15 +83,13 @@ const UserSearchBar = ({ filters, onChange, onSearch, onReset }) => {
           />
         </div>
         <button
-          style={{ marginBottom: "15px" }}
-          className="me-1 btn btn-primary"
+          className="me-1 btn btn-primary form-button-align"
           type="submit"
         >
           Hae
         </button>
         <button
-          style={{ marginBottom: "15px" }}
-          className="me-1 btn btn-secondary"
+          className="me-1 btn btn-secondary form-button-align"
           type="button"
           onClick={onReset}
         >

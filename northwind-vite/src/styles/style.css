@@ -58,6 +58,10 @@ input[type="search"] {
     max-width: fit-content;
 }
 
+.form-button-align {
+    margin-bottom: 15px;
+}
+
 .sortable-header {
     cursor: pointer;
     user-select: none;
