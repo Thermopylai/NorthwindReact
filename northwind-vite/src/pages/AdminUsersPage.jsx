@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import UserSearchBar from "../components/admin/UserSearchBar";
 import UsersTable from "../components/admin/UsersTable";
+import ResetPasswordModal from "../components/admin/ResetPasswordModal";
 import { useAuth } from "../auth/useAuth";
 
 const defaultFilters = {
@@ -19,10 +20,15 @@ const AdminUsersPage = () => {
     listRolePermissions,
     assignRole,
     removeRole,
+    resetPassword,
   } = useAuth();
   const [users, setUsers] = useState([]);
   const [roleNames, setRoleNames] = useState([]);
   const [filters, setFilters] = useState(defaultFilters);
+
+  const [resetPasswordUser, setResetPasswordUser] = useState(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -131,10 +137,14 @@ const AdminUsersPage = () => {
   };
 
   const handleRemoveRole = async (userId, role) => {
-    if (!window.confirm(`Haluatko varmasti poistaa roolin ${role} tältä käyttäjältä?`)) {
+    if (
+      !window.confirm(
+        `Haluatko varmasti poistaa roolin ${role} tältä käyttäjältä?`,
+      )
+    ) {
       return;
     }
-    
+
     try {
       setError("");
       setSuccessMessage("");
@@ -184,6 +194,61 @@ const AdminUsersPage = () => {
     await loadUsers(defaultFilters);
   };
 
+  const handleOpenResetPassword = (user) => {
+    setResetPasswordUser(user);
+    setNewPassword("");
+    setError("");
+    setSuccessMessage("");
+  };
+
+  const handleCloseResetPassword = () => {
+    setResetPasswordUser(null);
+    setNewPassword("");
+    setResetPasswordLoading(false);
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetPasswordUser) {
+      return;
+    }
+
+    const userId = resetPasswordUser.userId ?? resetPasswordUser.UserId;
+    const userName = resetPasswordUser.userName ?? resetPasswordUser.UserName;
+
+    if (!newPassword) {
+      setError("Anna uusi salasana.");
+      return;
+    }
+
+    try {
+      setResetPasswordLoading(true);
+      setError("");
+      setSuccessMessage("");
+
+      const payload = {
+        userId,
+        newPassword,
+      };
+
+      const response = await resetPassword(payload);
+
+      if (!response.success) {
+        throw new Error(
+          response.message ?? "Salasanan resetointi epäonnistui.",
+        );
+      }
+
+      setSuccessMessage(
+        `Käyttäjän ${userName} salasana resetoitiin onnistuneesti.`,
+      );
+      handleCloseResetPassword();
+    } catch (error) {
+      setError("Salasanan resetointi epäonnistui: " + error.message);
+    } finally {
+      setResetPasswordLoading(false);
+    }
+  };
+
   if (initialLoading) {
     return <div>Loading...</div>;
   }
@@ -212,6 +277,16 @@ const AdminUsersPage = () => {
         roleNames={roleNames}
         currentUserId={user?.userId ?? user?.UserId}
         onDelete={handleDeleteUser}
+        onOpenResetPassword={handleOpenResetPassword}
+      />
+
+      <ResetPasswordModal
+        user={resetPasswordUser}
+        password={newPassword}
+        loading={resetPasswordLoading}
+        onPasswordChange={setNewPassword}
+        onClose={handleCloseResetPassword}
+        onConfirm={handleResetPassword}
       />
     </>
   );

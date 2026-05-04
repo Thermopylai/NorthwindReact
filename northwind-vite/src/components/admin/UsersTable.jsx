@@ -7,6 +7,7 @@ const UsersTable = ({
   onAssignRole,
   onRemoveRole,
   roleNames,
+  onOpenResetPassword,
 }) => {
   const [selectedRoles, setSelectedRoles] = useState({});
 
@@ -123,6 +124,13 @@ const UsersTable = ({
               </td>
 
               <td className="text-nowrap">
+                <button
+                  type="button"
+                  className="btn btn-warning btn-sm me-2"
+                  onClick={() => onOpenResetPassword(user)}
+                >
+                  Resetoi salasana
+                </button>
                 <button
                   className="btn btn-danger btn-sm"
                   onClick={() => onDelete(userId)}
