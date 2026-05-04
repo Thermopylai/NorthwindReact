@@ -29,6 +29,7 @@ const AdminUsersPage = () => {
   const [resetPasswordUser, setResetPasswordUser] = useState(null);
   const [newPassword, setNewPassword] = useState("");
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  const [resetPasswordError, setResetPasswordError] = useState("");
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -87,6 +88,18 @@ const AdminUsersPage = () => {
 
     return () => clearTimeout(timeoutId);
   }, [successMessage]);
+
+  useEffect(() => {
+    if (!resetPasswordError) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setResetPasswordError("");
+    }, 4000);
+
+    return () => clearTimeout(timeoutId);
+  }, [resetPasswordError]);
 
   const loadUsers = useCallback(
     async (activeFilters) => {
@@ -197,6 +210,7 @@ const AdminUsersPage = () => {
   const handleOpenResetPassword = (user) => {
     setResetPasswordUser(user);
     setNewPassword("");
+    setResetPasswordError("");
     setError("");
     setSuccessMessage("");
   };
@@ -204,6 +218,7 @@ const AdminUsersPage = () => {
   const handleCloseResetPassword = () => {
     setResetPasswordUser(null);
     setNewPassword("");
+    setResetPasswordError("");
     setResetPasswordLoading(false);
   };
 
@@ -215,14 +230,15 @@ const AdminUsersPage = () => {
     const userId = resetPasswordUser.userId ?? resetPasswordUser.UserId;
     const userName = resetPasswordUser.userName ?? resetPasswordUser.UserName;
 
-    if (!newPassword) {
-      setError("Anna uusi salasana.");
+    if (!String(newPassword ?? "").trim()) {
+      setResetPasswordError("Anna uusi salasana.");
       return;
     }
 
     try {
       setResetPasswordLoading(true);
       setError("");
+      setResetPasswordError("");
       setSuccessMessage("");
 
       const payload = {
@@ -243,7 +259,9 @@ const AdminUsersPage = () => {
       );
       handleCloseResetPassword();
     } catch (error) {
-      setError("Salasanan resetointi epäonnistui: " + error.message);
+      setResetPasswordError(
+        "Salasanan resetointi epäonnistui: " + error.message,
+      );
     } finally {
       setResetPasswordLoading(false);
     }
@@ -284,6 +302,7 @@ const AdminUsersPage = () => {
         user={resetPasswordUser}
         password={newPassword}
         loading={resetPasswordLoading}
+        error={resetPasswordError}
         onPasswordChange={setNewPassword}
         onClose={handleCloseResetPassword}
         onConfirm={handleResetPassword}
