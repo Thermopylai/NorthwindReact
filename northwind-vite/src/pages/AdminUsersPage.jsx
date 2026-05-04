@@ -207,6 +207,17 @@ const AdminUsersPage = () => {
     await loadUsers(defaultFilters);
   };
 
+  const handleNewPasswordChange = useCallback((valueOrEvent) => {
+    const value =
+      typeof valueOrEvent === "string"
+        ? valueOrEvent
+        : (valueOrEvent?.target?.value ??
+          valueOrEvent?.currentTarget?.value ??
+          "");
+
+    setNewPassword(value);
+  }, []);
+
   const handleOpenResetPassword = (user) => {
     setResetPasswordUser(user);
     setNewPassword("");
@@ -230,7 +241,9 @@ const AdminUsersPage = () => {
     const userId = resetPasswordUser.userId ?? resetPasswordUser.UserId;
     const userName = resetPasswordUser.userName ?? resetPasswordUser.UserName;
 
-    if (!String(newPassword ?? "").trim()) {
+    const passwordValue = typeof newPassword === "string" ? newPassword : "";
+
+    if (!passwordValue.trim()) {
       setResetPasswordError("Anna uusi salasana.");
       return;
     }
@@ -243,7 +256,7 @@ const AdminUsersPage = () => {
 
       const payload = {
         userId,
-        newPassword,
+        newPassword: passwordValue,
       };
 
       const response = await resetPassword(payload);
@@ -303,7 +316,7 @@ const AdminUsersPage = () => {
         password={newPassword}
         loading={resetPasswordLoading}
         error={resetPasswordError}
-        onPasswordChange={setNewPassword}
+        onPasswordChange={handleNewPasswordChange}
         onClose={handleCloseResetPassword}
         onConfirm={handleResetPassword}
       />

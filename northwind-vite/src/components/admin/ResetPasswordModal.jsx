@@ -59,7 +59,8 @@ const ResetPasswordModal = ({
                 type="password"
                 className="form-control"
                 value={typeof password === "string" ? password : ""}
-                onChange={(event) => onPasswordChange(event.target.value)}
+                onChange={onPasswordChange}
+                onInput={onPasswordChange}
                 autoComplete="new-password"
               />
             </div>

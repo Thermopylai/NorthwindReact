@@ -27,7 +27,6 @@ const RegisterForm = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-
     try {
       setSubmitting(true);
       setError("");
@@ -85,8 +84,10 @@ const RegisterForm = () => {
           name="password"
           type="password"
           className="form-control"
-          value={formData.password}
+          value={typeof formData.password === "string" ? formData.password : ""}
           onChange={handleChange}
+          onInput={handleChange}
+          autoComplete="new-password"
         />
       </div>
 
@@ -99,8 +100,14 @@ const RegisterForm = () => {
           name="confirmPassword"
           type="password"
           className="form-control"
-          value={formData.confirmPassword}
+          value={
+            typeof formData.confirmPassword === "string"
+              ? formData.confirmPassword
+              : ""
+          }
           onChange={handleChange}
+          onInput={handleChange}
+          autoComplete="new-password"
         />
       </div>
 
