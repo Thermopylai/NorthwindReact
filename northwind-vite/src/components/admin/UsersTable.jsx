@@ -1,4 +1,4 @@
-const UsersTable = ({ users, onDelete }) => {
+const UsersTable = ({ users, currentUserId, onDelete }) => {
   if (!users.length) {
     return <p>Ei käyttäjiä näytettäväksi.</p>;
   }
@@ -14,21 +14,26 @@ const UsersTable = ({ users, onDelete }) => {
         </tr>
       </thead>
       <tbody>
-        {users.map((user) => (
-          <tr key={user.userId}>
-            <td>{user.userName}</td>
-            <td>{user.email}</td>
-            <td>{user.roles.join(", ")}</td>
-            <td>
-              <button
-                className="btn btn-danger btn-sm"
-                onClick={() => onDelete(user.userId)}
-              >
-                Poista
+        {users.map((user) => {
+          const roles = user.roles ?? user.Roles ?? [];
+          const isCurrentUser = (user.userId ?? user.UserId) === currentUserId;
+          return (
+            <tr key={user.userId ?? user.UserId}>
+              <td>{user.userName ?? user.UserName}</td>
+              <td>{user.email ?? user.Email}</td>
+              <td>{roles.length > 0 ? roles.join(", ") : "-"}</td>
+              <td>
+                <button
+                  className="btn btn-danger btn-sm"
+                  onClick={() => onDelete(user.userId ?? user.UserId)}
+                  disabled={isCurrentUser}
+                >
+                  Poista
               </button>
             </td>
           </tr>
-        ))}
+          );
+        })}
       </tbody>
     </table>
   );

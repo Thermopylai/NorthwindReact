@@ -12,10 +12,11 @@ const defaultFilters = {
 };
 
 const AdminUsersPage = () => {
-  const { deleteUser, searchUsers } = useAuth();
+  const { deleteUser, searchUsers, user } = useAuth();
   const [users, setUsers] = useState([]);
   const [filters, setFilters] = useState(defaultFilters);
 
+  const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -50,11 +51,18 @@ const AdminUsersPage = () => {
         setLoading(true);
         setError("");
         const response = await searchUsers(activeFilters);
-        setUsers(response.users);
+
+        if (!response.success) {
+          throw new Error(response.message ?? "Käyttäjien haku epäonnistui.");
+        }
+
+        setUsers(response.users ?? response.Users ?? []);
       } catch (error) {
+        setUsers([]);
         setError("Käyttäjien haku epäonnistui: " + error.message);
       } finally {
         setLoading(false);
+        setInitialLoading(false);
       }
     },
     [searchUsers],
@@ -70,8 +78,13 @@ const AdminUsersPage = () => {
     }
     try {
       setError("");
-      setSuccessMessage("");  
-      await deleteUser(userId);
+      setSuccessMessage("");
+      const response = await deleteUser(userId);
+
+      if (!response.success) {
+        throw new Error(response.message ?? "Käyttäjän poisto epäonnistui.");
+      }
+
       setSuccessMessage("Käyttäjä poistettu onnistuneesti");
       await loadUsers(filters);
     } catch (error) {
@@ -80,7 +93,6 @@ const AdminUsersPage = () => {
   };
 
   const handleSearch = async () => {
-    setFilters(filters);
     await loadUsers(filters);
   };
 
@@ -89,7 +101,7 @@ const AdminUsersPage = () => {
     await loadUsers(defaultFilters);
   };
 
-  if (loading) {
+  if (initialLoading) {
     return <div>Loading...</div>;
   }
 
@@ -104,11 +116,17 @@ const AdminUsersPage = () => {
 
       <div className="mb-3">
         {loading && <p>Ladataan käyttäjiä...</p>}
-        {error && <p>{error}</p>}
-        {successMessage && <p>{successMessage}</p>}
+        {error && <div className="alert alert-danger">{error}</div>}
+        {successMessage && (
+          <div className="alert alert-success">{successMessage}</div>
+        )}
       </div>
 
-      <UsersTable users={users} onDelete={handleDeleteUser} />
+      <UsersTable
+        users={users}
+        currentUserId={user?.userId ?? user?.UserId}
+        onDelete={handleDeleteUser}
+      />
     </>
   );
 };
